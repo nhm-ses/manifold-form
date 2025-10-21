@@ -683,7 +683,7 @@
     });
   }
 
-  // Opens the popover, positioning it correctly
+ // Opens the popover, positioning it correctly - REVISED LOGIC
   function openForPin(pin, event){
     closePopover();
     
@@ -700,31 +700,53 @@
     if (state.selections[port].sched === '40') radioSch40.checked = true;
     if (state.selections[port].sched === '80') radioSch80.checked = true;
     
+    // 1. Append invisibly to measure
     pop.style.left = pin.style.left;
-    pop.style.top = pin.style.top;
+    pop.style.top = pin.style.top; // Initial top based on pin
     pop.style.visibility = 'hidden'; 
     imgwrap.appendChild(pop);
     openPopover = pop;
 
+    // 2. Get measurements relative to the scrollable container (imgwrap or its parent)
     const popoverHeight = pop.offsetHeight;
-    const pinRect = pin.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const spaceBelow = viewportHeight - pinRect.bottom;
-    const spaceAbove = pinRect.top;
-    const popoverMargin = 12; 
+    // Get pin's offsetTop relative to its offsetParent (likely imgwrap)
+    const pinTopOffset = pin.offsetTop; 
+    // Get the visible height of the container that scrolls (could be body or a specific div)
+    // For simplicity, let's use window.innerHeight as the iFrame viewport height
+    const containerVisibleHeight = window.innerHeight; 
+    // How much the container has been scrolled
+    // Use document.documentElement.scrollTop for the iFrame's document scroll
+    const containerScrollTop = document.documentElement.scrollTop; 
+    
+    const popoverMargin = 12; // 0.75rem
 
-    if (spaceBelow < (popoverHeight + popoverMargin) && spaceAbove > (popoverHeight + popoverMargin)) {
+    // Calculate space below the pin *within the visible area*
+    // pinTopOffset is distance from top of container to top of pin
+    // containerScrollTop is how much content is hidden above the view
+    // Position of pin relative to viewport top = pinTopOffset - containerScrollTop
+    const pinTopInViewport = pinTopOffset - containerScrollTop;
+    const spaceBelowInViewport = containerVisibleHeight - (pinTopInViewport + pin.offsetHeight); 
+    const spaceAboveInViewport = pinTopInViewport;
+
+    // 3. Decide position
+    if (spaceBelowInViewport < (popoverHeight + popoverMargin) && spaceAboveInViewport > (popoverHeight + popoverMargin)) {
+      // Not enough space below, flip above
       pop.classList.add('opens-above');
-      pop.style.transform = 'translate(-50%, -100%)';
-      pop.style.marginTop = `-${popoverMargin}px`;
+      pop.style.transform = 'translate(-50%, -100%)'; // Position above the pin
+      pop.style.marginTop = `-${popoverMargin}px`; // Margin above the pin
     } else {
+      // Default: open below
       pop.classList.add('opens-below');
-      pop.style.transform = 'translate(-50%, 0)';
-      pop.style.marginTop = `${popoverMargin}px`;
+      pop.style.transform = 'translate(-50%, 0)'; // Position below the pin (default offset handles this)
+      pop.style.marginTop = `${pin.offsetHeight + popoverMargin}px`; // Adjust marginTop to clear the pin
+       // Readjust top slightly if needed - this might need tweaking
+      pop.style.top = `${pinTopOffset}px`; // Re-anchor top based on offsetTop
     }
     
+    // 4. Make visible
     pop.style.visibility = 'visible';
 
+    // 5. Add event listeners (no change here)
     pop.querySelector('[data-act="save"]').addEventListener('click', () => {
       const selectedSchedule = pop.querySelector('input[name="schedule"]:checked');
       state.selections[port].size = selSize.value;
