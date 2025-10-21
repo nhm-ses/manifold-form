@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SESF Manifold Order Form</title>
+<style>
+  :root {
+    /* Base Units */
+    --gap: 0.875rem; /* 14px */
+    --radius: 0.875rem; /* 14px */
+    
+    /* Colors */
+    --color-text: #0f172a;
+    --color-text-muted: #475569;
+    --color-bg-page: #0b1b1e;
+    --color-bg-wrap: #f8fafc;
+    --color-bg-card: white;
+    --color-bg-table-header: #f1f5f9;
+    --color-border: #e2e8f0;
+    --color-border-input: #cbd5e1;
+    --color-focus-shadow: rgba(14, 165, 233, .3);
+
+    /* Theme: Schedule 40 (Blue) */
+    --color-primary: #0ea5e9;
+    --color-primary-dark: #0284c7;
+    --color-primary-shadow: rgba(14,165,233,.35);
+
+    /* Theme: Schedule 80 (Orange) */
+    --color-secondary: #f59e0b;
+    --color-secondary-dark: #d97706;
+    --color-secondary-shadow: rgba(245, 158, 11, .35);
+
+    /* Fonts */
+    --font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    --font-size-base: 1rem; /* 16px */
+    --font-size-sm: 0.875rem; /* 14px */
+    --font-size-xs: 0.6rem; /* Adjusted for smaller labels */
+    --font-size-pin: 0.5625rem; /* 9px */
+  }
+
+  /* 1. Global Box-Sizing */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  
+  html {
+    font-size: 16px; /* Sets the base for 1rem */
+  }
+
+  body { 
+    font-family: var(--font-family); 
+    margin: 0; 
+    background: var(--color-bg-page); 
+    color: var(--color-text); 
+  }
+  
+  .wrap { 
+    max-width: 1000px; 
+    margin: 2rem auto; /* 32px */
+    padding: 1.5rem; /* 24px */
+    background: var(--color-bg-wrap); 
+    border-radius: 1.25rem; /* 20px */
+    box-shadow: 0 0.625rem 2.1875rem rgba(0,0,0,.25); /* 10px 35px */
+  }
+  
+  h1 { 
+    margin: 0 0 0.25rem; /* 4px */
+    text-align: center;
+    color: var(--color-text);
+  }
+  
+  .muted { 
+    color: var(--color-text-muted); 
+    margin-top: 0; 
+    text-align: center;
+    margin-bottom: 1.5rem; /* 24px */
+  }
+  
+  .card { 
+    background: var(--color-bg-card); 
+    border-radius: var(--radius); 
+    padding: 1rem; /* 16px */
+    box-shadow: 0 1px 0.375rem rgba(0,0,0,.08); /* 6px */
+    margin-bottom: var(--gap);
+  }
+  
+  .chooser.card { 
+    display: flex; 
+    gap: 1.25rem; /* 20px */
+    align-items: center; 
+  }
+  
+  .chooser label { 
+    display: flex; 
+    gap: 0.5rem; /* 8px */
+    align-items: center; 
+    padding: 0.5rem 0.75rem; /* 8px 12px */
+    border: 1px solid var(--color-border); 
+    border-radius: 0.75rem; /* 12px */
+    cursor: pointer; 
+    user-select: none; 
+  }
+  
+  .chooser input { 
+    accent-color: var(--color-primary); 
+  }
+  
+  .canvas { 
+    position: relative; 
+    width: 97%; 
+    background: #e2e8f0; /* Kept light gray for contrast */
+    border-radius: var(--radius); 
+    overflow: hidden; 
+  }
+  
+  .canvas .imgwrap { 
+    position: relative; 
+    width: 100%; 
+    padding: 0; 
+  }
+  
+  .canvas img { 
+    display: block; 
+    width: 100%; 
+    height: auto; 
+  }
+  
+  .pin { 
+    position: absolute; 
+    transform: translate(-50%, -50%); 
+    width: 1.275rem; /* Adjusted size */
+    height: 1.2rem; /* Adjusted size */
+    border-radius: 50%; 
+    background: white; 
+    border: 2px solid var(--color-primary);
+    display: grid; 
+    place-items: center; 
+    font-weight: 400; 
+    color: var(--color-primary);
+    cursor: grab; 
+    box-shadow: none;
+    font-size: var(--font-size-pin);
+  }
+  
+  .pin:hover { 
+    transform: translate(-50%,-50%) scale(1.06);
+    background: var(--color-bg-card);
+    border: 2px solid var(--color-primary);
+    color: var(--color-primary);
+    box-shadow: 0 2px 0.5rem var(--color-primary-shadow); 
+  }
+  
+  .pin.configured {
+    background: var(--color-primary);
+    color: var(--color-bg-card);
+    border: 2px solid var(--color-primary-dark);
+    box-shadow: 0 2px 0.5rem var(--color-primary-shadow);
+  }
+  
+  .pin.configured.sch80 {
+    background: var(--color-secondary);
+    border: 2px solid var(--color-secondary-dark);
+    color: var(--color-bg-card);
+    box-shadow: 0 2px 0.5rem var(--color-secondary-shadow);
+  }
+
+  /* Port Label style restored */
+  .port-label {
+    position: absolute;
+    transform: translate(0, -50%); /* Center vertically */
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--color-text);
+    background: rgba(255, 255, 255, 0.8);
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    line-height: 1.2;
+    z-index: 2;
+  }
+  
+  .popover { 
+    position: absolute; 
+    background: var(--color-bg-card); 
+    border: 1px solid var(--color-border); 
+    border-radius: 0.75rem; /* 12px */
+    padding: 0.75rem; /* 12px */
+    box-shadow: 0 0.75rem 1.875rem rgba(0,0,0,.18); /* 12px 30px */
+    width: 13.75rem; /* 220px */
+    z-index: 5; 
+    transition: transform 0.1s ease-out;
+  }
+  
+  .popover.opens-above {
+    transform-origin: bottom center;
+  }
+  
+  .popover.opens-below {
+    transform-origin: top center;
+  }
+  
+  .popover h4 { 
+    margin: 0 0 0.5rem; /* 8px */
+    font-size: var(--font-size-sm); 
+    color: var(--color-text);
+  }
+  
+  .row { 
+    display: flex; 
+    gap: var(--gap); 
+    flex-wrap: wrap; 
+    align-items: center; 
+  }
+  
+  .row.inputs { 
+    gap: 0.5rem; /* 8px */
+  }
+  
+  select, button, .btn, textarea { 
+    font: inherit; 
+  }
+  
+  select { 
+    padding: 0.5rem 0.625rem; /* 8px 10px */
+    border: 1px solid var(--color-border-input); 
+    border-radius: 0.625rem; /* 10px */
+    background: var(--color-bg-card); 
+  }
+
+  textarea.overlay-input {
+    resize: none;
+  }
+  
+  .btn { 
+    padding: 0.625rem 0.875rem; /* 10px 14px */
+    border-radius: 0.75rem; /* 12px */
+    border: 1px solid var(--color-primary); 
+    background: var(--color-primary); 
+    color: var(--color-bg-card); 
+    font-weight: 600; 
+    cursor: pointer; 
+  }
+  
+  .btn.secondary { 
+    background: var(--color-bg-card); 
+    color: var(--color-primary); 
+  }
+
+  .btn.danger {
+    background: var(--color-bg-card);
+    color: #ef4444;
+    border-color: #ef4444;
+    margin-right: auto; /* Pushes it to the left */
+  }
+  .btn.danger:focus-visible {
+    outline-color: #ef4444;
+    box-shadow: 0 0 0 5px rgba(239, 68, 68, .3);
+  }
+
+  table { 
+    width: 100%; 
+    border-collapse: collapse; 
+    background: var(--color-bg-card); 
+    border-radius: 0.75rem; /* 12px */
+    overflow: hidden; 
+  }
+  
+  th, td { 
+    padding: 0.625rem 0.75rem; /* 10px 12px */
+    border-bottom: 1px solid var(--color-border); 
+    text-align: left; 
+  }
+  
+  th { 
+    background: var(--color-bg-table-header); 
+  }
+  
+  tfoot td { 
+    border-bottom: none; 
+  }
+  
+  .submit-section {
+    text-align: center;
+    padding: 1rem 0; /* 16px */
+  }
+
+  .submit-section .btn {
+    margin: 0 0.5rem; /* 8px */
+  }
+
+  .overlay-input {
+    position: absolute;
+    background: transparent;
+    border: none;
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+    padding: 0.125rem 0.25rem; /* 2px 4px */
+    outline: none;
+    cursor: text;
+  }
+
+  .overlay-input:hover {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid var(--color-primary);
+    border-radius: 0.1875rem; /* 3px */
+  }
+
+  .overlay-input:focus {
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid var(--color-primary);
+    border-radius: 0.1875rem; /* 3px */
+  }
+  
+  .overlay-text {
+    position: absolute;
+    font-family: inherit;
+    font-size: var(--font-size-sm);
+    color: var(--color-text);
+    padding: 0.1875rem 0.25rem; /* 3px 4px */
+    cursor: default;
+    user-select: none;
+  }
+
+  /* Overlay positions */
+  #overlayName    { left: 32.3%; top: 13%; width: 113px; }
+  #overlayPhone   { left: 58.5%; top: 13%; width: 110px; }
+  #overlayCustadd { left: 39.1%; top: 19.3%; width: 300px; }
+  #overlayShipadd { left: 39.1%; top: 25.3%; width: 300px; }
+  #overlayNotes   { left: 32.3%; top: 74%; width: 37.5%; height: 12.5%; }
+  #overlayDate    { left: 33%; top: 89%; width: 130px; }
+  #overlayPO      { left: 58.1%; top: 89%; width: 110px; }
+  
+  /* Accessibility: :focus-visible styles */
+  .btn:focus-visible,
+  .chooser label:focus-visible,
+  .pin:focus-visible,
+  .popover select:focus-visible,
+  .popover button:focus-visible,
+  .overlay-input:focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 5px var(--color-focus-shadow);
+  }
+  
+  .pin.configured.sch80:focus-visible {
+    outline-color: var(--color-secondary);
+    box-shadow: 0 0 0 5px var(--color-secondary-shadow);
+  }
+
+  /* Responsive Tweaks: Media Query for mobile */
+  @media (max-width: 768px) {
+    body {
+      -webkit-text-size-adjust: 100%; /* Prevent iOS font scaling */
+    }
+    .wrap {
+      margin: 1rem auto;
+      padding: 1rem;
+    }
+    .chooser.card {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.75rem;
+    }
+    .chooser label {
+      justify-content: center;
+    }
+    .popover {
+      width: 90%;
+      left: 50% !important;
+      top: 50% !important;
+      transform: translate(-50%, -50%) !important; /* Force center */
+    }
+    #summary thead {
+      display: none; /* Hide header row */
+    }
+    #summary tr {
+      display: block;
+      margin-bottom: 1rem;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      padding: 0.5rem;
+    }
+    #summary td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px dashed var(--color-border);
+      padding: 0.75rem 0.5rem;
+    }
+    #summary td:last-child {
+      border-bottom: 0;
+      justify-content: flex-end;
+    }
+    #summary td:before {
+      content: attr(data-label);
+      font-weight: 600;
+      margin-right: 1rem;
+    }
+    #summary td[data-label="Port"]:before { content: "Port"; }
+    #summary td[data-label="Size"]:before { content: "Size"; }
+    #summary td[data-label="Schedule"]:before { content: "Schedule"; }
+    #summary td[data-label="Clear"]:before { content: ""; }
+  }
+
+</style>
+
+<style media="print">
+  /* 1. Explicitly hide interactive/unwanted elements */
+  h1,
+  p.muted,
+  .chooser.card,
+  #thankYouMessage,
+  .pin,        /* Hide the clickable pin */
+  .popover {   /* Hide the popover */
+    display: none !important;
+  }
+  /* .port-label IS NOT hidden */
+
+  /* 2. Reset body and main wrapper */
+  body {
+    background: white;
+  }
+  .wrap {
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* 3. Ensure the form canvas, labels, AND summary table ARE visible */
+  .canvas,
+  .canvas .imgwrap,
+  .imgwrap img,
+  .imgwrap .overlay-input,
+  .imgwrap .overlay-text,
+  .imgwrap .port-label, /* Make sure labels show */
+  #summaryCard,
+  #summaryCard * { 
+    display: block !important; 
+    visibility: visible !important;
+  }
+  
+  .canvas {
+    width: 100%;
+    background: none;
+    box-shadow: none;
+    border: none;
+  }
+  
+  /* 4. Style the text fields for printing */
+  .overlay-input, .overlay-text, .port-label {
+    border: none !important;
+    background: transparent !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* 5. Hide buttons from the printout */
+  #summaryCard .btn {
+    display: none !important;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="formContainer">
+    <h1>Manifold Order Form</h1>
+    <p class="muted">Pick a style, then click next to each port to choose Size and Schedule.</p>
+
+    <div class="card chooser" role="group" aria-label="Choose manifold style">
+      <label><input type="radio" name="style" value="same" checked> Same Side</label>
+      <label><input type="radio" name="style" value="opp"> Opposite Side</label>
+      <button id="resetBtn" class="btn secondary" style="margin-left:auto">Reset selections</button>
+    </div>
+
+    <div class="card canvas">
+      <div class="imgwrap">
+        <img id="diagram" alt="Manifold diagram" src="OppSide.png"/>
+        
+        <input type="text" id="overlayName" class="overlay-input" placeholder=" " required>
+        <input type="tel" id="overlayPhone" class="overlay-input" placeholder=" " required>
+        <input type="text" id="overlayCustadd" class="overlay-input" placeholder=" " required>
+        <input type="text" id="overlayShipadd" class="overlay-input" placeholder=" " required>
+        
+        <textarea id="overlayNotes" class="overlay-input" placeholder=" "></textarea>
+        
+        <span id="overlayDate" class="overlay-text"></span>
+        <span id="overlayPO" class="overlay-text"></span> 
+      </div>
+    </div>
+
+    <div id="summaryCard" class="card" style="display: none;">
+      <h3 style="margin-top:0">Selections</h3>
+      <table id="summary">
+        <thead>
+          <tr><th>Port</th><th>Size</th><th>Schedule</th><th></th></tr>
+        </thead>
+        <tbody id="summaryBody">
+        </tbody>
+        <tfoot>
+          <tr><td colspan="4">
+            <div class="submit-section">
+              <button id="submitBtn" class="btn">Submit Order</button>
+            </div>
+          </td></tr>
+        </tfoot>
+      </table>
+    </div>
+
+  </div> 
+  
+  <div id="thankYouMessage" style="display: none; text-align: center; padding: 2.5rem 0;">
+    <h2>Thank You!</h2>
+    <p class="muted" style="max-width: 400px; margin: 1rem auto 0;">Your order has been prepared for submission. Please complete the process in your email client.</p>
+  </div>
+
+</div>
+
+<template id="popoverTpl">
+  <div class="popover">
+    <h4></h4>
+    <div class="row inputs">
+      <label>Size
+        <select data-field="size">
+          <option value="">—</option>
+          <option>1/2"</option>
+          <option>3/4"</option>
+          <option>1"</option>
+        </select>
+      </label>
+      <label>Schedule
+        <div class="schedule-options">
+          <label><input type="radio" name="schedule" value="40"> Sch 40</label>
+          <label><input type="radio" name="schedule" value="80"> Sch 80</label>
+        </div>
+      </label>
+    </div>
+    <div class="row" style="margin-top:0.625rem; justify-content:flex-end;">
+      <button class="btn danger" data-act="clear">Clear</button>
+      <button class="btn secondary" data-act="close">Close</button>
+      <button class="btn" data-act="save">Save</button>
+    </div>
+  </div>
+</template>
+
+<script>
+(function(){
+  const state = {
+    style: 'same',
+    selections: {},
+    imgs: { same: 'SameSide.png', opp: 'OppSide.png' }
+  };
+
+  const summaryCard = document.getElementById('summaryCard');
+
+  // Coordinates include pin location (left, top) and label location (labelLeft, labelTop)
+  const portPositions = {
+    same: [
+      { id: 'P1', left: '53.9%', top: '40.1%', labelLeft: '57.8%', labelTop: '38.8%' },
+      { id: 'P2', left: '53.9%', top: '47.7%', labelLeft: '57.8%', labelTop: '46.4%' },
+      { id: 'P3', left: '53.9%', top: '55.2%', labelLeft: '57.8%', labelTop: '54.1%' },
+      { id: 'P4', left: '53.9%', top: '63%', labelLeft: '57.8%', labelTop: '61.8%' }
+    ],
+    opp: [
+      { id: 'P1', left: '44.5%', top: '40.8%', labelLeft: '34.6%', labelTop: '39.6%' },
+      { id: 'P2', left: '44.5%', top: '49%', labelLeft: '34.6%', labelTop: '47.4%' },
+      { id: 'P3', left: '44.5%', top: '57.4%', labelLeft: '34.6%', labelTop: '56.2%' },
+      { id: 'P4', left: '56%', top: '40.8%', labelLeft: '59.8%', labelTop: '39.6%' },
+      { id: 'P5', left: '56%', top: '49%', labelLeft: '59.8%', labelTop: '47.4%' },
+      { id: 'P6', left: '56%', top: '57.4%', labelLeft: '59.8%', labelTop: '56.2%' }
+    ]
+  };
+
+  function checkCompletion() {
+    const name = document.getElementById('overlayName').value.trim();
+    const phone = document.getElementById('overlayPhone').value.trim();
+    const custAdd = document.getElementById('overlayCustadd').value.trim();
+    const shipAdd = document.getElementById('overlayShipadd').value.trim();
+    const allInfoFilled = name && phone && custAdd && shipAdd;
+    const activePorts = portPositions[state.style].map(p => p.id);
+    const allPortsConfigured = activePorts.every(portId => {
+      const selection = state.selections[portId];
+      return selection && selection.size && selection.sched;
+    });
+    
+    if (allInfoFilled && allPortsConfigured) {
+      summaryCard.style.display = 'block';
+    } else {
+      summaryCard.style.display = 'none';
+    }
+  }
+
+  function initializePorts() {
+    state.selections = {};
+    portPositions[state.style].forEach(port => {
+      state.selections[port.id] = {size:'', sched:''};
+    });
+    updateTable(); 
+  }
+
+  document.querySelectorAll('input[name="style"]').forEach(r => {
+    r.addEventListener('change', (e) => {
+      state.style = e.target.value;
+      document.getElementById('diagram').src = state.imgs[state.style];
+      initializePorts();
+      updatePinsAndLabels(); // Use combined function
+      checkCompletion();
+    });
+  });
+  
+  // Renders both pins and their corresponding labels
+  function updatePinsAndLabels() {
+    document.querySelectorAll('.pin').forEach(pin => pin.remove());
+    document.querySelectorAll('.port-label').forEach(label => label.remove()); 
+    
+    const imgwrap = document.querySelector('.imgwrap');
+    portPositions[state.style].forEach((port, index) => {
+      // Create Pin
+      const pin = document.createElement('div');
+      pin.className = 'pin';
+      pin.dataset.port = port.id;
+      pin.style.left = port.left;
+      pin.style.top = port.top;
+      pin.textContent = index + 1;
+      pin.addEventListener('click', (e) => openForPin(pin, e)); 
+      
+      const selection = state.selections[port.id]; 
+      const isConfigured = selection && selection.size && selection.sched;
+
+      pin.classList.toggle('configured', isConfigured);
+      pin.classList.toggle('sch80', isConfigured && selection.sched === '80');
+      
+      imgwrap.appendChild(pin);
+      
+      // Create Label if configured
+      if (isConfigured) {
+        const label = document.createElement('div');
+        label.className = 'port-label';
+        label.style.left = port.labelLeft;
+        label.style.top = port.labelTop;
+        label.innerHTML = `${selection.size}<br>Sch ${selection.sched}`;
+        imgwrap.appendChild(label);
+      }
+    });
+    updateTable(); // Update summary table
+  }
+
+  const imgwrap = document.querySelector('.imgwrap');
+  let openPopover = null;
+
+  // Updates the summary table content
+  function updateTable(){
+    const tbody = document.getElementById('summaryBody');
+    tbody.innerHTML = '';
+    
+    portPositions[state.style].forEach((port, index) => {
+      const row = document.createElement('tr');
+      const portData = state.selections[port.id] || {size:'', sched:''};
+      
+      row.innerHTML = `
+        <td data-label="Port">Port ${index + 1}</td>
+        <td data-label="Size">${portData.size || '—'}</td>
+        <td data-label="Schedule">${portData.sched || '—'}</td>
+        <td data-label="Clear"><button data-row="${port.id}" class="btn secondary">Clear</button></td>
+      `;
+      
+      tbody.appendChild(row);
+    });
+
+    tbody.querySelectorAll('button[data-row]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const portId = btn.dataset.row;
+        state.selections[portId] = {size:'', sched:''};
+        updatePinsAndLabels(); // Update both pins and table
+        checkCompletion();
+      });
+    });
+  }
+
+  // Opens the popover, positioning it correctly
+  function openForPin(pin, event){
+    closePopover();
+    
+    const tpl = document.getElementById('popoverTpl').content.cloneNode(true);
+    const port = pin.dataset.port;
+    const pop = tpl.querySelector('.popover');
+    
+    tpl.querySelector('h4').textContent = 'Set Port ' + port.replace('P', '');
+    const selSize = tpl.querySelector('select[data-field="size"]');
+    const radioSch40 = tpl.querySelector('input[value="40"]');
+    const radioSch80 = tpl.querySelector('input[value="80"]');
+    
+    selSize.value = state.selections[port].size;
+    if (state.selections[port].sched === '40') radioSch40.checked = true;
+    if (state.selections[port].sched === '80') radioSch80.checked = true;
+    
+    pop.style.left = pin.style.left;
+    pop.style.top = pin.style.top;
+    pop.style.visibility = 'hidden'; 
+    imgwrap.appendChild(pop);
+    openPopover = pop;
+
+    const popoverHeight = pop.offsetHeight;
+    const pinRect = pin.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - pinRect.bottom;
+    const spaceAbove = pinRect.top;
+    const popoverMargin = 12; 
+
+    if (spaceBelow < (popoverHeight + popoverMargin) && spaceAbove > (popoverHeight + popoverMargin)) {
+      pop.classList.add('opens-above');
+      pop.style.transform = 'translate(-50%, -100%)';
+      pop.style.marginTop = `-${popoverMargin}px`;
+    } else {
+      pop.classList.add('opens-below');
+      pop.style.transform = 'translate(-50%, 0)';
+      pop.style.marginTop = `${popoverMargin}px`;
+    }
+    
+    pop.style.visibility = 'visible';
+
+    pop.querySelector('[data-act="save"]').addEventListener('click', () => {
+      const selectedSchedule = pop.querySelector('input[name="schedule"]:checked');
+      state.selections[port].size = selSize.value;
+      state.selections[port].sched = selectedSchedule ? selectedSchedule.value : '';
+      updatePinsAndLabels(); 
+      checkCompletion();
+      closePopover();
+    });
+    
+    pop.querySelector('[data-act="clear"]').addEventListener('click', () => {
+      state.selections[port] = {size:'', sched:''};
+      updatePinsAndLabels(); 
+      checkCompletion();
+      closePopover();
+    });
+    
+    pop.querySelector('[data-act="close"]').addEventListener('click', closePopover);
+  }
+
+  function closePopover(){
+    if (openPopover) openPopover.remove();
+    openPopover = null;
+  }
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if (confirm('Reset all selections?')) {
+      initializePorts();
+      updatePinsAndLabels(); 
+      checkCompletion();
+    }
+  });
+
+  document.querySelectorAll('.overlay-input').forEach(input => {
+    input.addEventListener('input', checkCompletion);
+  });
+
+  // Handles the final submission (currently mailto:)
+  document.getElementById('submitBtn').addEventListener('click', () => {
+    const customerName = document.getElementById('overlayName').value.trim();
+    const phoneNumber = document.getElementById('overlayPhone').value.trim();
+    const orderDate = document.getElementById('overlayDate').textContent;
+    const poNumber = document.getElementById('overlayPO').textContent.trim(); 
+    const notes = document.getElementById('overlayNotes').value.trim();
+    const manifoldType = state.style === 'same' ? 'Same Side (SS)' : 'Opposite Side (OS)';
+    
+    let emailBody = `SESF MANIFOLD ORDER\n\n`;
+    emailBody += `Date: ${orderDate}\n`;
+    emailBody += `PO #: ${poNumber || 'N/A'}\n\n`;
+    emailBody += `Customer: ${customerName}\n`;
+    emailBody += `Phone: ${phoneNumber}\n\n`;
+    emailBody += `Manifold Type: ${manifoldType}\n\n`;
+    emailBody += `Port Configurations:\n`;
+    
+    Object.entries(state.selections).forEach(([port, config]) => {
+      if (config.size && config.sched) {
+        emailBody += `Port ${port.replace('P', '')}: ${config.size} - Sch ${config.sched}\n`;
+      }
+    });
+
+    if (notes) {
+      emailBody += `\nNotes:\n${notes}\n`;
+    }
+    
+    const subject = 'SESF Manifold Order';
+    // Make sure to put the correct recipient email here
+    const mailtoLink = `mailto:@sestores.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+    window.open(mailtoLink);
+
+    document.getElementById('formContainer').style.display = 'none';
+    document.getElementById('thankYouMessage').style.display = 'block';
+  });
+
+  // Sets the current date on the form
+  function setTodaysDate() {
+    const today = new Date();
+    const formattedDate = `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`;
+    document.getElementById('overlayDate').textContent = formattedDate;
+  }
+
+  // Initialize page on load
+  setTodaysDate();
+  initializePorts();
+  updatePinsAndLabels(); 
+})();
+</script>
+</body>
+</html>
