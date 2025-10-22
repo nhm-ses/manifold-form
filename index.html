@@ -131,8 +131,8 @@
   .pin { 
     position: absolute; 
     transform: translate(-50%, -50%); 
-    width: 1.275rem; /* Adjusted size */
-    height: 1.2rem; /* Adjusted size */
+    width: 1.375rem; /* Adjusted size */
+    height: 1.4rem; /* Adjusted size */
     border-radius: 50%; 
     background: white; 
     border: 2px solid var(--color-primary);
@@ -167,7 +167,6 @@
     box-shadow: 0 2px 0.5rem var(--color-secondary-shadow);
   }
 
-  /* Port Label style restored */
   .port-label {
     position: absolute;
     transform: translate(0, -50%); /* Center vertically */
@@ -181,6 +180,7 @@
     z-index: 2;
   }
   
+  /* MODIFIED: Popover shape */
   .popover { 
     position: absolute; 
     background: var(--color-bg-card); 
@@ -188,7 +188,7 @@
     border-radius: 0.75rem; /* 12px */
     padding: 0.75rem; /* 12px */
     box-shadow: 0 0.75rem 1.875rem rgba(0,0,0,.18); /* 12px 30px */
-    width: 13.75rem; /* 220px */
+    width: 18.75rem; /* 300px - Wider */
     z-index: 5; 
     transition: transform 0.1s ease-out;
   }
@@ -214,9 +214,21 @@
     align-items: center; 
   }
   
+  /* MODIFIED: Popover input layout */
   .row.inputs { 
-    gap: 0.5rem; /* 8px */
+    gap: 1rem; /* Increase gap between Size/Schedule */
+    justify-content: space-between; /* Push items apart */
   }
+  .row.inputs > label { /* Target the direct label children */
+    display: flex;
+    flex-direction: column; /* Stack label text above input */
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  .row.inputs select {
+    width: 6rem; /* Give select a fixed width */
+  }
+
   
   select, button, .btn, textarea { 
     font: inherit; 
@@ -543,7 +555,6 @@
     </div>
     <div class="row" style="margin-top:0.625rem; justify-content:flex-end;">
       <button class="btn danger" data-act="clear">Clear</button>
-      <button class="btn secondary" data-act="close">Close</button>
       <button class="btn" data-act="save">Save</button>
     </div>
   </div>
@@ -559,7 +570,6 @@
 
   const summaryCard = document.getElementById('summaryCard');
 
-  // Coordinates include pin location (left, top) and label location (labelLeft, labelTop)
   const portPositions = {
     same: [
       { id: 'P1', left: '53.9%', top: '40.1%', labelLeft: '57.8%', labelTop: '38.8%' },
@@ -609,26 +619,28 @@
       state.style = e.target.value;
       document.getElementById('diagram').src = state.imgs[state.style];
       initializePorts();
-      updatePinsAndLabels(); // Use combined function
+      updatePinsAndLabels();
       checkCompletion();
     });
   });
   
-  // Renders both pins and their corresponding labels
   function updatePinsAndLabels() {
     document.querySelectorAll('.pin').forEach(pin => pin.remove());
     document.querySelectorAll('.port-label').forEach(label => label.remove()); 
     
     const imgwrap = document.querySelector('.imgwrap');
     portPositions[state.style].forEach((port, index) => {
-      // Create Pin
       const pin = document.createElement('div');
       pin.className = 'pin';
       pin.dataset.port = port.id;
       pin.style.left = port.left;
       pin.style.top = port.top;
       pin.textContent = index + 1;
-      pin.addEventListener('click', (e) => openForPin(pin, e)); 
+      // MODIFIED: Added event propagation stop
+      pin.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent click from bubbling up to the document
+        openForPin(pin, e);
+      }); 
       
       const selection = state.selections[port.id]; 
       const isConfigured = selection && selection.size && selection.sched;
@@ -638,7 +650,6 @@
       
       imgwrap.appendChild(pin);
       
-      // Create Label if configured
       if (isConfigured) {
         const label = document.createElement('div');
         label.className = 'port-label';
@@ -648,13 +659,13 @@
         imgwrap.appendChild(label);
       }
     });
-    updateTable(); // Update summary table
+    updateTable(); 
   }
 
   const imgwrap = document.querySelector('.imgwrap');
   let openPopover = null;
+  let currentPin = null; // Keep track of the pin that opened the popover
 
-  // Updates the summary table content
   function updateTable(){
     const tbody = document.getElementById('summaryBody');
     tbody.innerHTML = '';
@@ -677,16 +688,22 @@
       btn.addEventListener('click', () => {
         const portId = btn.dataset.row;
         state.selections[portId] = {size:'', sched:''};
-        updatePinsAndLabels(); // Update both pins and table
+        updatePinsAndLabels(); 
         checkCompletion();
       });
     });
   }
 
- // Opens the popover, positioning it correctly - REVISED LOGIC
+  // MODIFIED: Popover opening logic
   function openForPin(pin, event){
-    closePopover();
+    // If clicking the *same pin* that already has the popover open, do nothing
+    if (openPopover && currentPin === pin) {
+        return;
+    }
     
+    closePopover(); // Close any existing popover first
+    currentPin = pin; // Track which pin opened this
+
     const tpl = document.getElementById('popoverTpl').content.cloneNode(true);
     const port = pin.dataset.port;
     const pop = tpl.querySelector('.popover');
@@ -700,53 +717,33 @@
     if (state.selections[port].sched === '40') radioSch40.checked = true;
     if (state.selections[port].sched === '80') radioSch80.checked = true;
     
-    // 1. Append invisibly to measure
     pop.style.left = pin.style.left;
-    pop.style.top = pin.style.top; // Initial top based on pin
+    pop.style.top = pin.style.top;
     pop.style.visibility = 'hidden'; 
     imgwrap.appendChild(pop);
     openPopover = pop;
 
-    // 2. Get measurements relative to the scrollable container (imgwrap or its parent)
     const popoverHeight = pop.offsetHeight;
-    // Get pin's offsetTop relative to its offsetParent (likely imgwrap)
-    const pinTopOffset = pin.offsetTop; 
-    // Get the visible height of the container that scrolls (could be body or a specific div)
-    // For simplicity, let's use window.innerHeight as the iFrame viewport height
-    const containerVisibleHeight = window.innerHeight; 
-    // How much the container has been scrolled
-    // Use document.documentElement.scrollTop for the iFrame's document scroll
-    const containerScrollTop = document.documentElement.scrollTop; 
-    
-    const popoverMargin = 12; // 0.75rem
+    const pinRect = pin.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - pinRect.bottom;
+    const spaceAbove = pinRect.top;
+    const popoverMargin = 12; 
 
-    // Calculate space below the pin *within the visible area*
-    // pinTopOffset is distance from top of container to top of pin
-    // containerScrollTop is how much content is hidden above the view
-    // Position of pin relative to viewport top = pinTopOffset - containerScrollTop
-    const pinTopInViewport = pinTopOffset - containerScrollTop;
-    const spaceBelowInViewport = containerVisibleHeight - (pinTopInViewport + pin.offsetHeight); 
-    const spaceAboveInViewport = pinTopInViewport;
-
-    // 3. Decide position
-    if (spaceBelowInViewport < (popoverHeight + popoverMargin) && spaceAboveInViewport > (popoverHeight + popoverMargin)) {
-      // Not enough space below, flip above
+    if (spaceBelow < (popoverHeight + popoverMargin) && spaceAbove > (popoverHeight + popoverMargin)) {
       pop.classList.add('opens-above');
-      pop.style.transform = 'translate(-50%, -100%)'; // Position above the pin
-      pop.style.marginTop = `-${popoverMargin}px`; // Margin above the pin
+      pop.style.transform = 'translate(-50%, -100%)';
+      pop.style.marginTop = `-${popoverMargin}px`;
     } else {
-      // Default: open below
       pop.classList.add('opens-below');
-      pop.style.transform = 'translate(-50%, 0)'; // Position below the pin (default offset handles this)
-      pop.style.marginTop = `${pin.offsetHeight + popoverMargin}px`; // Adjust marginTop to clear the pin
-       // Readjust top slightly if needed - this might need tweaking
-      pop.style.top = `${pinTopOffset}px`; // Re-anchor top based on offsetTop
+      pop.style.transform = 'translate(-50%, 0)';
+      pop.style.marginTop = `${pin.offsetHeight + popoverMargin}px`; 
+      pop.style.top = `${pin.offsetTop}px`; 
     }
     
-    // 4. Make visible
     pop.style.visibility = 'visible';
 
-    // 5. Add event listeners (no change here)
+    // Event listeners for Save/Clear (no Close button anymore)
     pop.querySelector('[data-act="save"]').addEventListener('click', () => {
       const selectedSchedule = pop.querySelector('input[name="schedule"]:checked');
       state.selections[port].size = selSize.value;
@@ -763,13 +760,26 @@
       closePopover();
     });
     
-    pop.querySelector('[data-act="close"]').addEventListener('click', closePopover);
+    // Prevent clicks *inside* the popover from closing it
+    pop.addEventListener('click', (e) => e.stopPropagation());
   }
 
+  // MODIFIED: Close popover function
   function closePopover(){
     if (openPopover) openPopover.remove();
     openPopover = null;
+    currentPin = null; // Reset tracked pin
   }
+  
+  // NEW: Global click listener to close popover
+  document.addEventListener('click', (event) => {
+      // If a popover is open AND the click was NOT on the popover itself
+      // AND the click was NOT the pin that opened it (handled by stopPropagation)
+      if (openPopover && !openPopover.contains(event.target)) {
+          closePopover();
+      }
+  });
+
 
   document.getElementById('resetBtn').addEventListener('click', () => {
     if (confirm('Reset all selections?')) {
@@ -783,7 +793,6 @@
     input.addEventListener('input', checkCompletion);
   });
 
-  // Handles the final submission (currently mailto:)
   document.getElementById('submitBtn').addEventListener('click', () => {
     const customerName = document.getElementById('overlayName').value.trim();
     const phoneNumber = document.getElementById('overlayPhone').value.trim();
@@ -811,7 +820,6 @@
     }
     
     const subject = 'SESF Manifold Order';
-    // Make sure to put the correct recipient email here
     const mailtoLink = `mailto:@sestores.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
     window.open(mailtoLink);
 
@@ -819,14 +827,13 @@
     document.getElementById('thankYouMessage').style.display = 'block';
   });
 
-  // Sets the current date on the form
   function setTodaysDate() {
     const today = new Date();
     const formattedDate = `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`;
     document.getElementById('overlayDate').textContent = formattedDate;
   }
 
-  // Initialize page on load
+  // Initialize page
   setTodaysDate();
   initializePorts();
   updatePinsAndLabels(); 
