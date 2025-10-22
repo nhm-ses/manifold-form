@@ -529,7 +529,7 @@
   
   <div id="thankYouMessage" style="display: none; text-align: center; padding: 2.5rem 0;">
     <h2>Thank You!</h2>
-    <p class="muted" style="max-width: 400px; margin: 1rem auto 0;">Your order has been prepared for submission. Please complete the process in your email client.</p>
+    <p class="muted" style="max-width: 400px; margin: 1rem auto 0;">Your order has been prepared for submission. Thank you!.</p>
   </div>
 
 </div>
@@ -819,9 +819,9 @@
       emailBody += `\nNotes:\n${notes}\n`;
     }
     
-    const subject = 'SESF Manifold Order';
-    const mailtoLink = `mailto:@sestores.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
-    window.open(mailtoLink);
+    // const subject = 'SESF Manifold Order';
+    // const mailtoLink = `mailto:@sestores.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
+    // window.open(mailtoLink);
 
     document.getElementById('formContainer').style.display = 'none';
     document.getElementById('thankYouMessage').style.display = 'block';
