@@ -180,7 +180,6 @@
     z-index: 2;
   }
   
-  /* MODIFIED: Popover shape */
   .popover { 
     position: absolute; 
     background: var(--color-bg-card); 
@@ -188,7 +187,7 @@
     border-radius: 0.75rem; /* 12px */
     padding: 0.75rem; /* 12px */
     box-shadow: 0 0.75rem 1.875rem rgba(0,0,0,.18); /* 12px 30px */
-    width: 18.75rem; /* 300px - Wider */
+    width: 13.75rem; /* 220px */
     z-index: 5; 
     transition: transform 0.1s ease-out;
   }
@@ -214,21 +213,9 @@
     align-items: center; 
   }
   
-  /* MODIFIED: Popover input layout */
   .row.inputs { 
-    gap: 1rem; /* Increase gap between Size/Schedule */
-    justify-content: space-between; /* Push items apart */
+    gap: 0.5rem; /* 8px */
   }
-  .row.inputs > label { /* Target the direct label children */
-    display: flex;
-    flex-direction: column; /* Stack label text above input */
-    align-items: flex-start;
-    gap: 0.25rem;
-  }
-  .row.inputs select {
-    width: 6rem; /* Give select a fixed width */
-  }
-
   
   select, button, .btn, textarea { 
     font: inherit; 
@@ -473,7 +460,9 @@
   }
 
   /* 5. Hide buttons from the printout */
-  #summaryCard .btn {
+  #summaryCard .btn, 
+  #summaryCard #customerEmail,  /* Hide email input on print */
+  #summaryCard label[for="customerEmail"] /* Hide email label on print */ {
     display: none !important;
   }
 </style>
@@ -493,7 +482,7 @@
 
     <div class="card canvas">
       <div class="imgwrap">
-        <img id="diagram" alt="Manifold diagram" src="OppSide.png"/>
+        <img id="diagram" alt="Manifold diagram" src="Manifold%20Folder/OppSide.png"/>
         
         <input type="text" id="overlayName" class="overlay-input" placeholder=" " required>
         <input type="tel" id="overlayPhone" class="overlay-input" placeholder=" " required>
@@ -507,7 +496,7 @@
       </div>
     </div>
 
-    <div id="summaryCard" class="card" style="display: none;">
+    <div id="summaryCard" class="card">
       <h3 style="margin-top:0">Selections</h3>
       <table id="summary">
         <thead>
@@ -518,6 +507,10 @@
         <tfoot>
           <tr><td colspan="4">
             <div class="submit-section">
+              <div style="max-width: 400px; margin: 0 auto 1rem; text-align: left;">
+                <label for="customerEmail" style="font-weight: 600; font-size: 0.875rem; display: block; margin-bottom: 0.25rem;">Email:</label>
+                <input type="email" id="customerEmail" placeholder="Enter Email Here" style="width: 100%; padding: 0.5rem 0.625rem; border: 1px solid var(--color-border-input); border-radius: 0.625rem;" required>
+              </div>
               <button id="submitBtn" class="btn">Submit Order</button>
             </div>
           </td></tr>
@@ -529,7 +522,7 @@
   
   <div id="thankYouMessage" style="display: none; text-align: center; padding: 2.5rem 0;">
     <h2>Thank You!</h2>
-    <p class="muted" style="max-width: 400px; margin: 1rem auto 0;">Your order has been prepared for submission. Thank you!.</p>
+    <p class="muted" style="max-width: 400px; margin: 1rem auto 0;">Your order has been submitted.</p>
   </div>
 
 </div>
@@ -555,6 +548,7 @@
     </div>
     <div class="row" style="margin-top:0.625rem; justify-content:flex-end;">
       <button class="btn danger" data-act="clear">Clear</button>
+      <button class="btn secondary" data-act="close">Close</button>
       <button class="btn" data-act="save">Save</button>
     </div>
   </div>
@@ -565,7 +559,10 @@
   const state = {
     style: 'same',
     selections: {},
-    imgs: { same: 'SameSide.png', opp: 'OppSide.png' }
+    imgs: { 
+      same: 'SameSide.png', 
+      opp: 'OppSide.png' 
+    }
   };
 
   const summaryCard = document.getElementById('summaryCard');
@@ -587,24 +584,7 @@
     ]
   };
 
-  function checkCompletion() {
-    const name = document.getElementById('overlayName').value.trim();
-    const phone = document.getElementById('overlayPhone').value.trim();
-    const custAdd = document.getElementById('overlayCustadd').value.trim();
-    const shipAdd = document.getElementById('overlayShipadd').value.trim();
-    const allInfoFilled = name && phone && custAdd && shipAdd;
-    const activePorts = portPositions[state.style].map(p => p.id);
-    const allPortsConfigured = activePorts.every(portId => {
-      const selection = state.selections[portId];
-      return selection && selection.size && selection.sched;
-    });
-    
-    if (allInfoFilled && allPortsConfigured) {
-      summaryCard.style.display = 'block';
-    } else {
-      summaryCard.style.display = 'none';
-    }
-  }
+  // REMOVED: checkCompletion() function is gone
 
   function initializePorts() {
     state.selections = {};
@@ -620,7 +600,7 @@
       document.getElementById('diagram').src = state.imgs[state.style];
       initializePorts();
       updatePinsAndLabels();
-      checkCompletion();
+      // REMOVED: checkCompletion() call
     });
   });
   
@@ -636,11 +616,7 @@
       pin.style.left = port.left;
       pin.style.top = port.top;
       pin.textContent = index + 1;
-      // MODIFIED: Added event propagation stop
-      pin.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent click from bubbling up to the document
-        openForPin(pin, e);
-      }); 
+      pin.addEventListener('click', (e) => openForPin(pin, e)); 
       
       const selection = state.selections[port.id]; 
       const isConfigured = selection && selection.size && selection.sched;
@@ -664,7 +640,6 @@
 
   const imgwrap = document.querySelector('.imgwrap');
   let openPopover = null;
-  let currentPin = null; // Keep track of the pin that opened the popover
 
   function updateTable(){
     const tbody = document.getElementById('summaryBody');
@@ -689,21 +664,14 @@
         const portId = btn.dataset.row;
         state.selections[portId] = {size:'', sched:''};
         updatePinsAndLabels(); 
-        checkCompletion();
+        // REMOVED: checkCompletion() call
       });
     });
   }
 
-  // MODIFIED: Popover opening logic
   function openForPin(pin, event){
-    // If clicking the *same pin* that already has the popover open, do nothing
-    if (openPopover && currentPin === pin) {
-        return;
-    }
+    closePopover();
     
-    closePopover(); // Close any existing popover first
-    currentPin = pin; // Track which pin opened this
-
     const tpl = document.getElementById('popoverTpl').content.cloneNode(true);
     const port = pin.dataset.port;
     const pop = tpl.querySelector('.popover');
@@ -737,106 +705,118 @@
     } else {
       pop.classList.add('opens-below');
       pop.style.transform = 'translate(-50%, 0)';
-      pop.style.marginTop = `${pin.offsetHeight + popoverMargin}px`; 
-      pop.style.top = `${pin.offsetTop}px`; 
+      pop.style.marginTop = `${popoverMargin}px`;
     }
     
     pop.style.visibility = 'visible';
 
-    // Event listeners for Save/Clear (no Close button anymore)
     pop.querySelector('[data-act="save"]').addEventListener('click', () => {
       const selectedSchedule = pop.querySelector('input[name="schedule"]:checked');
       state.selections[port].size = selSize.value;
       state.selections[port].sched = selectedSchedule ? selectedSchedule.value : '';
       updatePinsAndLabels(); 
-      checkCompletion();
+      // REMOVED: checkCompletion() call
       closePopover();
     });
     
     pop.querySelector('[data-act="clear"]').addEventListener('click', () => {
       state.selections[port] = {size:'', sched:''};
       updatePinsAndLabels(); 
-      checkCompletion();
+      // REMOVED: checkCompletion() call
       closePopover();
     });
     
-    // Prevent clicks *inside* the popover from closing it
-    pop.addEventListener('click', (e) => e.stopPropagation());
+    pop.querySelector('[data-act="close"]').addEventListener('click', closePopover);
   }
 
-  // MODIFIED: Close popover function
   function closePopover(){
     if (openPopover) openPopover.remove();
     openPopover = null;
-    currentPin = null; // Reset tracked pin
   }
-  
-  // NEW: Global click listener to close popover
-  document.addEventListener('click', (event) => {
-      // If a popover is open AND the click was NOT on the popover itself
-      // AND the click was NOT the pin that opened it (handled by stopPropagation)
-      if (openPopover && !openPopover.contains(event.target)) {
-          closePopover();
-      }
-  });
-
 
   document.getElementById('resetBtn').addEventListener('click', () => {
     if (confirm('Reset all selections?')) {
       initializePorts();
       updatePinsAndLabels(); 
-      checkCompletion();
+      // REMOVED: checkCompletion() call
     }
   });
 
-  document.querySelectorAll('.overlay-input').forEach(input => {
-    input.addEventListener('input', checkCompletion);
-  });
+  // REMOVED: input listener that called checkCompletion()
 
+  // ===================================================
+  // MODIFIED: This is the new postMessage submit logic
+  // ===================================================
   document.getElementById('submitBtn').addEventListener('click', () => {
-    const customerName = document.getElementById('overlayName').value.trim();
-    const phoneNumber = document.getElementById('overlayPhone').value.trim();
-    const orderDate = document.getElementById('overlayDate').textContent;
-    const poNumber = document.getElementById('overlayPO').textContent.trim(); 
-    const notes = document.getElementById('overlayNotes').value.trim();
-    const manifoldType = state.style === 'same' ? 'Same Side (SS)' : 'Opposite Side (OS)';
     
-    let emailBody = `SESF MANIFOLD ORDER\n\n`;
-    emailBody += `Date: ${orderDate}\n`;
-    emailBody += `PO #: ${poNumber || 'N/A'}\n\n`;
-    emailBody += `Customer: ${customerName}\n`;
-    emailBody += `Phone: ${phoneNumber}\n\n`;
-    emailBody += `Manifold Type: ${manifoldType}\n\n`;
-    emailBody += `Port Configurations:\n`;
-    
-    Object.entries(state.selections).forEach(([port, config]) => {
-      if (config.size && config.sched) {
-        emailBody += `Port ${port.replace('P', '')}: ${config.size} - Sch ${config.sched}\n`;
-      }
+    // 1. Gather all data
+    const formData = {
+      customerName: document.getElementById('overlayName').value.trim(),
+      phoneNumber: document.getElementById('overlayPhone').value.trim(),
+      customerEmail: document.getElementById('customerEmail').value.trim(), // Get email from summary
+      orderDate: document.getElementById('overlayDate').textContent.trim(),
+      poNumber: document.getElementById('overlayPO').textContent.trim(), 
+      custAddress: document.getElementById('overlayCustadd').value.trim(),
+      shipAddress: document.getElementById('overlayShipadd').value.trim(),
+      notes: document.getElementById('overlayNotes').value.trim(),
+      manifoldType: state.style === 'same' ? 'Same Side (SS)' : 'Opposite Side (OS)',
+      portSelections: {}
+    };
+
+    // 2. NEW: Validation Block
+    const allInfoFilled = formData.customerName && formData.phoneNumber && formData.customerEmail && formData.custAddress && formData.shipAddress;
+    const activePorts = portPositions[state.style].map(p => p.id);
+    const allPortsConfigured = activePorts.every(portId => {
+      const selection = state.selections[portId];
+      return selection && selection.size && selection.sched;
     });
 
-    if (notes) {
-      emailBody += `\nNotes:\n${notes}\n`;
+    if (!allInfoFilled) {
+        alert('Please fill out all customer information, including name, phone, email, and addresses.');
+        return;
     }
-    
-     const subject = 'SESF Manifold Order';
-     const mailtoLink = `mailto:adam@sestores.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(emailBody)}`;
-     window.open(mailtoLink);
+    if (!allPortsConfigured) {
+        alert('Please configure all ports for the selected manifold style.');
+        return;
+    }
+    if (!formData.customerEmail.includes('@')) {
+        alert('Please enter a valid customer email address.');
+        return;
+    }
 
+    // 3. Format port selections
+    Object.entries(state.selections).forEach(([port, config]) => {
+      if (config.size && config.sched) {
+        const portKey = `Port ${port.replace('P', '')}`; 
+        formData.portSelections[portKey] = `${config.size} - Sch ${config.sched}`;
+      }
+    });
+    
+    // 4. Send data to Wix page via postMessage
+    window.parent.postMessage(formData, "https://www.contractor.shallotteelectric.com/"); 
+    console.log("Form data sent to Wix:", formData); // For debugging
+
+    // 5. Show thank you message
     document.getElementById('formContainer').style.display = 'none';
     document.getElementById('thankYouMessage').style.display = 'block';
   });
 
+
+  // Sets the current date on the form
   function setTodaysDate() {
     const today = new Date();
     const formattedDate = `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`;
     document.getElementById('overlayDate').textContent = formattedDate;
   }
 
-  // Initialize page
+  // Initialize page on load
   setTodaysDate();
   initializePorts();
   updatePinsAndLabels(); 
+  
+  // MODIFIED: Set the correct initial image on load
+  document.getElementById('diagram').src = state.imgs[state.style];
+
 })();
 </script>
 </body>
