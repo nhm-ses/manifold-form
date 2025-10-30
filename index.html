@@ -615,7 +615,7 @@
       pin.textContent = index + 1;
       // MODIFIED: Added stopPropagation
       pin.addEventListener('click', (e) => {
-        e.stopPropagation();
+        e.stopPropagation(); 
         openForPin(pin, e);
       }); 
       
@@ -705,8 +705,10 @@
     const popoverMargin = 12; // 0.75rem
 
     // 3. Get container and pin positions
-    const pinRect = pin.getBoundingClientRect(); // Get pin's position in the viewport
-    const viewportHeight = window.innerHeight;   // Get viewport height
+    // This method gets the pin's position relative to the visible browser window
+    const pinRect = pin.getBoundingClientRect();
+    // This gets the browser window's height
+    const viewportHeight = window.innerHeight;
 
     // 4. Calculate available space
     const spaceBelow = viewportHeight - pinRect.bottom;
@@ -722,6 +724,7 @@
       // Default: open below
       pop.classList.add('opens-below');
       pop.style.transform = 'translate(-50%, 0)'; // Position below the pin
+      // We use margin-top relative to the pin's top position
       pop.style.marginTop = `${pin.offsetHeight + popoverMargin}px`; 
     }
     
