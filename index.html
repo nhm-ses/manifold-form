@@ -669,7 +669,7 @@
     });
   }
 
-  function openForPin(pin, event){
+function openForPin(pin, event){
     closePopover();
     
     const tpl = document.getElementById('popoverTpl').content.cloneNode(true);
@@ -685,44 +685,57 @@
     if (state.selections[port].sched === '40') radioSch40.checked = true;
     if (state.selections[port].sched === '80') radioSch80.checked = true;
     
+    // 1. Append invisibly to measure
     pop.style.left = pin.style.left;
-    pop.style.top = pin.style.top;
+    pop.style.top = `${pin.offsetTop}px`; // Use offsetTop for base position
     pop.style.visibility = 'hidden'; 
     imgwrap.appendChild(pop);
     openPopover = pop;
 
+    // 2. Get measurements
     const popoverHeight = pop.offsetHeight;
-    const pinRect = pin.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const spaceBelow = viewportHeight - pinRect.bottom;
-    const spaceAbove = pinRect.top;
-    const popoverMargin = 12; 
+    const popoverMargin = 12; // 0.75rem
 
+    // 3. Get container and pin positions
+    const containerScrollTop = document.documentElement.scrollTop;
+    const containerVisibleHeight = window.innerHeight;
+    const pinTopInViewport = pin.offsetTop - containerScrollTop;
+    const pinBottomInViewport = pinTopInViewport + pin.offsetHeight;
+
+    // 4. Calculate available space
+    const spaceBelow = containerVisibleHeight - pinBottomInViewport;
+    const spaceAbove = pinTopInViewport;
+
+    // 5. Decide position
     if (spaceBelow < (popoverHeight + popoverMargin) && spaceAbove > (popoverHeight + popoverMargin)) {
+      // Not enough space below, flip above
       pop.classList.add('opens-above');
-      pop.style.transform = 'translate(-50%, -100%)';
-      pop.style.marginTop = `-${popoverMargin}px`;
+      pop.style.transform = 'translate(-50%, -100%)'; // Position above the pin
+      pop.style.marginTop = `-${popoverMargin}px`; // Margin above the pin
     } else {
+      // Default: open below
       pop.classList.add('opens-below');
-      pop.style.transform = 'translate(-50%, 0)';
-      pop.style.marginTop = `${popoverMargin}px`;
+      pop.style.transform = 'translate(-50%, 0)'; // Position below the pin
+      pop.style.marginTop = `${popoverMargin}px`; // Margin below the pin
     }
     
+    // 6. Make visible
     pop.style.visibility = 'visible';
 
+    // 7. Add event listeners
     pop.querySelector('[data-act="save"]').addEventListener('click', () => {
       const selectedSchedule = pop.querySelector('input[name="schedule"]:checked');
       state.selections[port].size = selSize.value;
       state.selections[port].sched = selectedSchedule ? selectedSchedule.value : '';
       updatePinsAndLabels(); 
-      // REMOVED: checkCompletion() call
+      checkCompletion();
       closePopover();
     });
     
     pop.querySelector('[data-act="clear"]').addEventListener('click', () => {
       state.selections[port] = {size:'', sched:''};
       updatePinsAndLabels(); 
-      // REMOVED: checkCompletion() call
+      checkCompletion();
       closePopover();
     });
     
@@ -735,12 +748,13 @@
   }
 
   document.getElementById('resetBtn').addEventListener('click', () => {
-    if (confirm('Reset all selections?')) {
-      initializePorts();
-      updatePinsAndLabels(); 
-      // REMOVED: checkCompletion() call
-    }
+    // ... (this function is unchanged) ...
   });
+
+  document.querySelectorAll('.overlay-input').forEach(input => {
+    input.addEventListener('input', checkCompletion);
+  });
+  document.getElementById('overlayEmail').addEventListener('input', checkCompletion);
 
   // REMOVED: input listener that called checkCompletion()
 
