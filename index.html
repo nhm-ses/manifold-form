@@ -547,8 +547,6 @@
       </label>
     </div>
     <div class="row" style="margin-top:0.625rem; justify-content:flex-end;">
-      <button class="btn danger" data-act="clear">Clear</button>
-      <button class="btn secondary" data-act="close">Close</button>
       <button class="btn" data-act="save">Save</button>
     </div>
   </div>
@@ -615,7 +613,11 @@
       pin.style.left = port.left;
       pin.style.top = port.top;
       pin.textContent = index + 1;
-      pin.addEventListener('click', (e) => openForPin(pin, e)); 
+      // MODIFIED: Added stopPropagation
+      pin.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openForPin(pin, e);
+      }); 
       
       const selection = state.selections[port.id]; 
       const isConfigured = selection && selection.size && selection.sched;
@@ -639,6 +641,7 @@
 
   const imgwrap = document.querySelector('.imgwrap');
   let openPopover = null;
+  let currentPin = null; // Track the currently open pin
 
   function updateTable(){
     const tbody = document.getElementById('summaryBody');
@@ -671,7 +674,11 @@
   // MODIFIED: This is the new, more reliable openForPin
   // ===================================================
   function openForPin(pin, event){
-    closePopover();
+    if (currentPin === pin) {
+      return; // Do nothing if clicking the same pin
+    }
+    closePopover(); // Close any old one
+    currentPin = pin; // Track this pin
     
     const tpl = document.getElementById('popoverTpl').content.cloneNode(true);
     const port = pin.dataset.port;
@@ -698,10 +705,8 @@
     const popoverMargin = 12; // 0.75rem
 
     // 3. Get container and pin positions
-    // This method gets the pin's position relative to the visible browser window
-    const pinRect = pin.getBoundingClientRect();
-    // This gets the browser window's height
-    const viewportHeight = window.innerHeight;
+    const pinRect = pin.getBoundingClientRect(); // Get pin's position in the viewport
+    const viewportHeight = window.innerHeight;   // Get viewport height
 
     // 4. Calculate available space
     const spaceBelow = viewportHeight - pinRect.bottom;
@@ -717,7 +722,6 @@
       // Default: open below
       pop.classList.add('opens-below');
       pop.style.transform = 'translate(-50%, 0)'; // Position below the pin
-      // We use margin-top relative to the pin's top position
       pop.style.marginTop = `${pin.offsetHeight + popoverMargin}px`; 
     }
     
@@ -733,19 +737,22 @@
       closePopover();
     });
     
-    pop.querySelector('[data-act="clear"]').addEventListener('click', () => {
-      state.selections[port] = {size:'', sched:''};
-      updatePinsAndLabels(); 
-      closePopover();
-    });
-    
-    pop.querySelector('[data-act="close"]').addEventListener('click', closePopover);
+    // Stop clicks *inside* the popover from closing it
+    pop.addEventListener('click', (e) => e.stopPropagation());
   }
 
   function closePopover(){
     if (openPopover) openPopover.remove();
     openPopover = null;
+    currentPin = null; // Untrack the pin
   }
+  
+  // NEW: Global click listener to close popover
+  document.addEventListener('click', (event) => {
+    if (openPopover && !openPopover.contains(event.target)) {
+      closePopover();
+    }
+  });
 
   document.getElementById('resetBtn').addEventListener('click', () => {
     if (confirm('Reset all selections?')) {
@@ -753,8 +760,6 @@
       updatePinsAndLabels(); 
     }
   });
-
-  // REMOVED: input listeners
 
   // ===================================================
   // MODIFIED: This is the new postMessage submit logic
