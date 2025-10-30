@@ -584,7 +584,7 @@
     ]
   };
 
-  // REMOVED: checkCompletion() function is gone
+  // REMOVED: checkCompletion() function
 
   function initializePorts() {
     state.selections = {};
@@ -600,7 +600,6 @@
       document.getElementById('diagram').src = state.imgs[state.style];
       initializePorts();
       updatePinsAndLabels();
-      // REMOVED: checkCompletion() call
     });
   });
   
@@ -664,12 +663,14 @@
         const portId = btn.dataset.row;
         state.selections[portId] = {size:'', sched:''};
         updatePinsAndLabels(); 
-        // REMOVED: checkCompletion() call
       });
     });
   }
 
-function openForPin(pin, event){
+  // ===================================================
+  // MODIFIED: This is the new, more reliable openForPin
+  // ===================================================
+  function openForPin(pin, event){
     closePopover();
     
     const tpl = document.getElementById('popoverTpl').content.cloneNode(true);
@@ -697,14 +698,14 @@ function openForPin(pin, event){
     const popoverMargin = 12; // 0.75rem
 
     // 3. Get container and pin positions
-    const containerScrollTop = document.documentElement.scrollTop;
-    const containerVisibleHeight = window.innerHeight;
-    const pinTopInViewport = pin.offsetTop - containerScrollTop;
-    const pinBottomInViewport = pinTopInViewport + pin.offsetHeight;
+    // This method gets the pin's position relative to the visible browser window
+    const pinRect = pin.getBoundingClientRect();
+    // This gets the browser window's height
+    const viewportHeight = window.innerHeight;
 
     // 4. Calculate available space
-    const spaceBelow = containerVisibleHeight - pinBottomInViewport;
-    const spaceAbove = pinTopInViewport;
+    const spaceBelow = viewportHeight - pinRect.bottom;
+    const spaceAbove = pinRect.top;
 
     // 5. Decide position
     if (spaceBelow < (popoverHeight + popoverMargin) && spaceAbove > (popoverHeight + popoverMargin)) {
@@ -716,7 +717,8 @@ function openForPin(pin, event){
       // Default: open below
       pop.classList.add('opens-below');
       pop.style.transform = 'translate(-50%, 0)'; // Position below the pin
-      pop.style.marginTop = `${popoverMargin}px`; // Margin below the pin
+      // We use margin-top relative to the pin's top position
+      pop.style.marginTop = `${pin.offsetHeight + popoverMargin}px`; 
     }
     
     // 6. Make visible
@@ -728,14 +730,12 @@ function openForPin(pin, event){
       state.selections[port].size = selSize.value;
       state.selections[port].sched = selectedSchedule ? selectedSchedule.value : '';
       updatePinsAndLabels(); 
-      checkCompletion();
       closePopover();
     });
     
     pop.querySelector('[data-act="clear"]').addEventListener('click', () => {
       state.selections[port] = {size:'', sched:''};
       updatePinsAndLabels(); 
-      checkCompletion();
       closePopover();
     });
     
@@ -748,15 +748,13 @@ function openForPin(pin, event){
   }
 
   document.getElementById('resetBtn').addEventListener('click', () => {
-    // ... (this function is unchanged) ...
+    if (confirm('Reset all selections?')) {
+      initializePorts();
+      updatePinsAndLabels(); 
+    }
   });
 
-  document.querySelectorAll('.overlay-input').forEach(input => {
-    input.addEventListener('input', checkCompletion);
-  });
-  document.getElementById('overlayEmail').addEventListener('input', checkCompletion);
-
-  // REMOVED: input listener that called checkCompletion()
+  // REMOVED: input listeners
 
   // ===================================================
   // MODIFIED: This is the new postMessage submit logic
@@ -825,11 +823,10 @@ function openForPin(pin, event){
 
   // Initialize page on load
   setTodaysDate();
-  initializePorts();
-  updatePinsAndLabels(); 
-  
   // MODIFIED: Set the correct initial image on load
   document.getElementById('diagram').src = state.imgs[state.style];
+  initializePorts();
+  updatePinsAndLabels(); 
 
 })();
 </script>
